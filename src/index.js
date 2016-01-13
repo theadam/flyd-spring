@@ -15,6 +15,7 @@ export function spring(val$, [k, b] = presets.noWobble) {
 
   const output$ = stream();
   engine.on('tick', (delta) => {
+    if (delta > 1000) return;
     const destX = val$() || 0;
     if (destX === x) return;
     const [newX, newV] = stepper((delta / 1000), x, vel, destX, k$(), b$());
