@@ -9,13 +9,6 @@ var flydExternal = {
   amd: 'flyd'
 };
 
-var rafLoopExternal = {
-  root: 'rafLoop',
-  commonjs2: 'raf-loop',
-  commonjs: 'raf-loop',
-  amd: 'raf-loop'
-};
-
 var plugins = [
   new webpack.DefinePlugin({
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
@@ -45,7 +38,6 @@ module.exports = {
     libraryTarget: 'umd'
   },
   externals: {
-    "raf-loop": rafLoopExternal,
     flyd: flydExternal
   },
   plugins: plugins,
