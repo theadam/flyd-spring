@@ -96,6 +96,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  var output$ = (0, _flyd.stream)();
 	  engine.on('tick', function (delta) {
+	    if (delta > 1000) return;
 	    var destX = val$() || 0;
 	    if (destX === x) return;
 
