@@ -94,7 +94,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var k$ = (0, _flyd.isStream)(k) ? k : (0, _flyd.stream)(k);
 	  var b$ = (0, _flyd.isStream)(b) ? b : (0, _flyd.stream)(b);
 
-	  var output$ = (0, _flyd.stream)();
+	  var output$ = (0, _flyd.stream)(x);
 	  engine.on('tick', function (delta) {
 	    if (delta > 1000) return;
 	    var destX = val$() || 0;
