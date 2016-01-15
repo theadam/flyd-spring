@@ -13,7 +13,7 @@ export function spring(val$, [k, b] = presets.noWobble) {
   const k$ = isStream(k) ? k : stream(k);
   const b$ = isStream(b) ? b : stream(b);
 
-  const output$ = stream();
+  const output$ = stream(x);
   engine.on('tick', (delta) => {
     if (delta > 1000) return;
     const destX = val$() || 0;
