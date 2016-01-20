@@ -41,6 +41,7 @@
     "webpack": "^1.11.0"
   },
   "dependencies": {
-    "raf-loop": "^1.1.3"
+    "raf-loop": "^1.1.3",
+    "ramda": "^0.17.1"
   }
 }

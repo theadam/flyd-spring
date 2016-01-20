@@ -2,7 +2,7 @@ import './index.css';
 import { stream, on } from 'flyd';
 import { spring } from 'flyd-spring';
 
-const input$ = stream();
+const input$ = stream(0);
 
 [...document.querySelectorAll('input[type=range]')].forEach(range => {
   if (range.id === 'source') return;
