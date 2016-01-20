@@ -7,7 +7,7 @@
 		exports["flydSpring"] = factory(require("flyd"));
 	else
 		root["flydSpring"] = factory(root["flyd"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_15__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_10__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -67,25 +67,21 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	var _rafLoop = __webpack_require__(8);
+	var _rafLoop = __webpack_require__(5);
 
 	var _rafLoop2 = _interopRequireDefault(_rafLoop);
 
-	var _ramdaSrcClone = __webpack_require__(10);
+	var _flyd = __webpack_require__(10);
 
-	var _ramdaSrcClone2 = _interopRequireDefault(_ramdaSrcClone);
+	var _reactMotionLibStepper = __webpack_require__(8);
 
-	var _flyd = __webpack_require__(15);
+	var _reactMotionLibStepper2 = _interopRequireDefault(_reactMotionLibStepper);
 
-	var _stepper3 = __webpack_require__(3);
+	var _reactMotionLibPresets = __webpack_require__(7);
 
-	var _stepper4 = _interopRequireDefault(_stepper3);
+	var _reactMotionLibPresets2 = _interopRequireDefault(_reactMotionLibPresets);
 
-	var _presets = __webpack_require__(2);
-
-	var _presets2 = _interopRequireDefault(_presets);
-
-	exports.presets = _presets2['default'];
+	exports.presets = _reactMotionLibPresets2['default'];
 
 	var engine = (0, _rafLoop2['default'])();
 
@@ -167,22 +163,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return [input, false];
 	}
 
-	function stepSprings(springs, inputValues, delta) {
-	  var values = (0, _ramdaSrcClone2['default'])(inputValues);
+	var baseObj = function baseObj(from) {
+	  return Array.isArray(from) ? [] : {};
+	};
+	var base = function base(from) {
+	  return typeof from === 'object' ? baseObj(from) : undefined;
+	};
+
+	function stepSprings(springs, values, last, delta) {
 	  if (!isSpring(springs)) {
-	    Object.keys(springs).forEach(function (k) {
-	      var val = stepSprings(springs[k], values[k], delta);
-	      if (val === false) {
-	        delete springs[k];
-	      } else {
-	        values[k] = val;
+	    for (var k in springs) {
+	      if (springs.hasOwnProperty(k)) {
+	        var val = stepSprings(springs[k], values[k] || base(last[k]), last[k], delta);
+	        if (val === false) {
+	          delete springs[k];
+	        } else {
+	          values[k] = val;
+	        }
 	      }
-	    });
+	    }
 	    return Object.keys(springs).length === 0 ? false : values;
 	  }
-	  if (values === springs.dest && springs.vel === 0) return false;
 
-	  var _stepper = (0, _stepper4['default'])(delta / 1000, values, springs.vel, springs.dest, springs.config[0], springs.config[1]);
+	  var _stepper = (0, _reactMotionLibStepper2['default'])(delta / 1000, last, springs.vel, springs.dest, springs.config[0], springs.config[1]);
 
 	  var _stepper2 = _slicedToArray(_stepper, 2);
 
@@ -193,21 +196,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return newX;
 	}
 
-	function stepVals(vals, inputValues) {
+	function stepVals(vals, values) {
 	  if (typeof vals === 'object') {
-	    var _ret3 = (function () {
-	      var values = (0, _ramdaSrcClone2['default'])(inputValues);
-	      Object.keys(vals).forEach(function (k) {
-	        var val = stepVals(vals[k], values[k]);
+	    for (var k in vals) {
+	      if (vals.hasOwnProperty(k)) {
+	        var val = stepVals(vals[k], values[k] || base(vals[k]));
 	        delete vals[k];
 	        values[k] = val;
-	      });
-	      return {
-	        v: values
-	      };
-	    })();
-
-	    if (typeof _ret3 === 'object') return _ret3.v;
+	      }
+	    }
+	    return values;
 	  }
 	  return vals;
 	}
@@ -216,6 +214,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var output$ = (0, _flyd.stream)(input$());
 	  var springs = undefined;
 	  var vals = undefined;
+
 	  (0, _flyd.on)(function (v) {
 	    var updateInfo = updateInput(vals, springs, v);
 	    vals = updateInfo[0];
@@ -224,18 +223,19 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	  engine.on('tick', function (delta) {
 	    if (delta > 1000) return;
-	    if (!springs && !vals) return;
-	    var next = (0, _ramdaSrcClone2['default'])(output$());
+	    if (springs === false && vals === false) return;
+	    var next = base(output$());
+
 	    if (springs) {
-	      var updated = stepSprings(springs, next, delta);
+	      var updated = stepSprings(springs, next, output$(), delta);
 	      if (updated === false) {
 	        springs = false;
 	      } else {
 	        next = updated;
 	      }
 	    }
-	    if (!springs && !vals) return;
-	    if (vals) {
+	    if (springs === false && vals === false) return;
+	    if (vals !== false) {
 	      next = stepVals(vals, next);
 	      vals = false;
 	    }
@@ -246,11 +246,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 	function spring(val$) {
-	  var config = arguments.length <= 1 || arguments[1] === undefined ? _presets2['default'].noWobble : arguments[1];
+	  var config = arguments.length <= 1 || arguments[1] === undefined ? _reactMotionLibPresets2['default'].noWobble : arguments[1];
 
-	  if ((0, _flyd.isStream)(val$ || 0)) {
-	    var _ret4 = (function () {
-	      var input$ = (0, _flyd.stream)(val$());
+	  if ((0, _flyd.isStream)(val$)) {
+	    var _ret3 = (function () {
+	      var input$ = (0, _flyd.stream)(val$() || 0);
 	      var skip = true;
 	      (0, _flyd.on)(function (v) {
 	        if (skip) {
@@ -264,94 +264,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 	    })();
 
-	    if (typeof _ret4 === 'object') return _ret4.v;
+	    if (typeof _ret3 === 'object') return _ret3.v;
 	  }
 	  return wrapSpring(val$, config);
 	}
 
 /***/ },
 /* 1 */
-/***/ function(module, exports) {
-
-	/**
-	 * Optimized internal two-arity curry function.
-	 *
-	 * @private
-	 * @category Function
-	 * @param {Function} fn The function to curry.
-	 * @return {Function} The curried function.
-	 */
-	module.exports = function _curry1(fn) {
-	  return function f1(a) {
-	    if (arguments.length === 0) {
-	      return f1;
-	    } else if (a != null && a['@@functional/placeholder'] === true) {
-	      return f1;
-	    } else {
-	      return fn.apply(this, arguments);
-	    }
-	  };
-	};
-
-
-/***/ },
-/* 2 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	exports["default"] = {
-	  noWobble: [170, 26], // the default
-	  gentle: [120, 14],
-	  wobbly: [180, 12],
-	  stiff: [210, 20]
-	};
-	module.exports = exports["default"];
-
-/***/ },
-/* 3 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	exports["default"] = stepper;
-	var errorMargin = 0.001;
-
-	function stepper(frameRate, x, v, destX, k, b) {
-	  // Spring stiffness, in kg / s^2
-
-	  // for animations, destX is really spring length (spring at rest). initial
-	  // position is considered as the stretched/compressed position of a spring
-	  var Fspring = -k * (x - destX);
-
-	  // Damping, in kg / s
-	  var Fdamper = -b * v;
-
-	  // usually we put mass here, but for animation purposes, specifying mass is a
-	  // bit redundant. you could simply adjust k and b accordingly
-	  // let a = (Fspring + Fdamper) / mass;
-	  var a = Fspring + Fdamper;
-
-	  var newV = v + a * frameRate;
-	  var newX = x + newV * frameRate;
-
-	  if (Math.abs(newV) < errorMargin && Math.abs(newX - destX) < errorMargin) {
-	    return [destX, 0];
-	  }
-
-	  return [newX, newV];
-	}
-
-	module.exports = exports["default"];
-
-/***/ },
-/* 4 */
 /***/ function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -655,7 +574,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 5 */
+/* 2 */
 /***/ function(module, exports) {
 
 	if (typeof Object.create === 'function') {
@@ -684,7 +603,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 6 */
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {// Generated by CoffeeScript 1.7.1
@@ -720,10 +639,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	}).call(this);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(4)))
 
 /***/ },
-/* 7 */
+/* 4 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -820,13 +739,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 8 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var inherits = __webpack_require__(5)
-	var EventEmitter = __webpack_require__(4).EventEmitter
-	var now = __webpack_require__(14)
-	var raf = __webpack_require__(9)
+	var inherits = __webpack_require__(2)
+	var EventEmitter = __webpack_require__(1).EventEmitter
+	var now = __webpack_require__(9)
+	var raf = __webpack_require__(6)
 
 	module.exports = Engine
 	function Engine(fn) {
@@ -869,10 +788,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 9 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var now = __webpack_require__(6)
+	var now = __webpack_require__(3)
 	  , global = typeof window === 'undefined' ? {} : window
 	  , vendors = ['moz', 'webkit']
 	  , suffix = 'AnimationFrame'
@@ -943,129 +862,62 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 10 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var _clone = __webpack_require__(11);
-	var _curry1 = __webpack_require__(1);
-
-
-	/**
-	 * Creates a deep copy of the value which may contain (nested) `Array`s and
-	 * `Object`s, `Number`s, `String`s, `Boolean`s and `Date`s. `Function`s are
-	 * not copied, but assigned by their reference.
-	 *
-	 * @func
-	 * @memberOf R
-	 * @category Object
-	 * @sig {*} -> {*}
-	 * @param {*} value The object or array to clone
-	 * @return {*} A new object or array.
-	 * @example
-	 *
-	 *      var objects = [{}, {}, {}];
-	 *      var objectsClone = R.clone(objects);
-	 *      objects[0] === objectsClone[0]; //=> false
-	 */
-	module.exports = _curry1(function clone(value) {
-	  return _clone(value, [], []);
-	});
-
-
-/***/ },
-/* 11 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var _cloneRegExp = __webpack_require__(12);
-	var type = __webpack_require__(13);
-
-
-	/**
-	 * Copies an object.
-	 *
-	 * @private
-	 * @param {*} value The value to be copied
-	 * @param {Array} refFrom Array containing the source references
-	 * @param {Array} refTo Array containing the copied source references
-	 * @return {*} The copied value.
-	 */
-	module.exports = function _clone(value, refFrom, refTo) {
-	  var copy = function copy(copiedValue) {
-	    var len = refFrom.length;
-	    var idx = 0;
-	    while (idx < len) {
-	      if (value === refFrom[idx]) {
-	        return refTo[idx];
-	      }
-	      idx += 1;
-	    }
-	    refFrom[idx + 1] = value;
-	    refTo[idx + 1] = copiedValue;
-	    for (var key in value) {
-	      copiedValue[key] = _clone(value[key], refFrom, refTo);
-	    }
-	    return copiedValue;
-	  };
-	  switch (type(value)) {
-	    case 'Object':  return copy({});
-	    case 'Array':   return copy([]);
-	    case 'Date':    return new Date(value);
-	    case 'RegExp':  return _cloneRegExp(value);
-	    default:        return value;
-	  }
-	};
-
-
-/***/ },
-/* 12 */
+/* 7 */
 /***/ function(module, exports) {
 
-	module.exports = function _cloneRegExp(pattern) {
-	  return new RegExp(pattern.source, (pattern.global     ? 'g' : '') +
-	                                    (pattern.ignoreCase ? 'i' : '') +
-	                                    (pattern.multiline  ? 'm' : '') +
-	                                    (pattern.sticky     ? 'y' : '') +
-	                                    (pattern.unicode    ? 'u' : ''));
+	
+	// [stiffness, damping]
+	"use strict";
+
+	exports.__esModule = true;
+	exports["default"] = {
+	  noWobble: [170, 26], // the default
+	  gentle: [120, 14],
+	  wobbly: [180, 12],
+	  stiff: [210, 20]
 	};
-
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var _curry1 = __webpack_require__(1);
-
-
-	/**
-	 * Gives a single-word string description of the (native) type of a value, returning such
-	 * answers as 'Object', 'Number', 'Array', or 'Null'.  Does not attempt to distinguish user
-	 * Object types any further, reporting them all as 'Object'.
-	 *
-	 * @func
-	 * @memberOf R
-	 * @category Type
-	 * @sig (* -> {*}) -> String
-	 * @param {*} val The value to test
-	 * @return {String}
-	 * @example
-	 *
-	 *      R.type({}); //=> "Object"
-	 *      R.type(1); //=> "Number"
-	 *      R.type(false); //=> "Boolean"
-	 *      R.type('s'); //=> "String"
-	 *      R.type(null); //=> "Null"
-	 *      R.type([]); //=> "Array"
-	 *      R.type(/[A-z]/); //=> "RegExp"
-	 */
-	module.exports = _curry1(function type(val) {
-	  return val === null      ? 'Null'      :
-	         val === undefined ? 'Undefined' :
-	         Object.prototype.toString.call(val).slice(8, -1);
-	});
-
+	module.exports = exports["default"];
 
 /***/ },
-/* 14 */
+/* 8 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	exports.__esModule = true;
+	exports["default"] = stepper;
+
+	var errorMargin = 0.0001;
+
+	function stepper(frameRate, x, v, destX, k, b) {
+	  // Spring stiffness, in kg / s^2
+
+	  // for animations, destX is really spring length (spring at rest). initial
+	  // position is considered as the stretched/compressed position of a spring
+	  var Fspring = -k * (x - destX);
+
+	  // Damping, in kg / s
+	  var Fdamper = -b * v;
+
+	  // usually we put mass here, but for animation purposes, specifying mass is a
+	  // bit redundant. you could simply adjust k and b accordingly
+	  // let a = (Fspring + Fdamper) / mass;
+	  var a = Fspring + Fdamper;
+
+	  var newV = v + a * frameRate;
+	  var newX = x + newV * frameRate;
+
+	  if (Math.abs(newV - v) < errorMargin && Math.abs(newX - x) < errorMargin) {
+	    return [destX, 0];
+	  }
+
+	  return [newX, newV];
+	}
+
+	module.exports = exports["default"];
+
+/***/ },
+/* 9 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {module.exports =
@@ -1079,10 +931,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 15 */
+/* 10 */
 /***/ function(module, exports) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_15__;
+	module.exports = __WEBPACK_EXTERNAL_MODULE_10__;
 
 /***/ }
 /******/ ])
