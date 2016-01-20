@@ -1,9 +1,7 @@
 import loop from 'raf-loop';
-import clone from 'ramda/src/clone';
 import { stream, isStream, on } from 'flyd';
-
-import stepper from './stepper';
-import presets from './presets';
+import stepper from 'react-motion/lib/stepper';
+import presets from 'react-motion/lib/presets';
 
 export { presets as presets };
 
@@ -62,35 +60,42 @@ function updateInput(vals, springs, input) {
   return [input, false];
 }
 
-function stepSprings(springs, inputValues, delta) {
-  const values = clone(inputValues);
+const baseObj = from => Array.isArray(from) ? [] : {};
+const base = from => typeof from === 'object' ? baseObj(from) : undefined;
+
+function stepSprings(springs, values, last, delta) {
   if (!isSpring(springs)) {
-    Object.keys(springs).forEach(k => {
-      const val = stepSprings(springs[k], values[k], delta);
-      if (val === false) {
-        delete(springs[k]);
-      } else {
+    let updateCount = 0;
+    for (const k in springs) {
+      if (springs.hasOwnProperty(k)) {
+        const [val, updated] = stepSprings(springs[k], values[k] || base(last[k]), last[k], delta);
+        if (updated === false) {
+          delete(springs[k]);
+        } else {
+          updateCount += 1;
+        }
         values[k] = val;
       }
-    });
-    return Object.keys(springs).length === 0 ? false : values;
+    }
+    return [values, updateCount > 0];
   }
-  if (values === springs.dest && springs.vel === 0) return false;
-  const [newX, newV] = stepper(delta / 1000, values, springs.vel,
+  if (last === springs.dest && springs.vel === 0) return [last, false];
+  const [newX, newV] = stepper(delta / 1000, last, springs.vel,
                                springs.dest, springs.config[0],
                                springs.config[1]);
   springs.vel = newV;
-  return newX;
+  return [newX, true];
 }
 
-function stepVals(vals, inputValues) {
+function stepVals(vals, values) {
   if (typeof vals === 'object') {
-    const values = clone(inputValues);
-    Object.keys(vals).forEach(k => {
-      const val = stepVals(vals[k], values[k]);
-      delete(vals[k]);
-      values[k] = val;
-    });
+    for (const k in vals) {
+      if (vals.hasOwnProperty(k)) {
+        const val = stepVals(vals[k], values[k] || base(vals[k]));
+        delete(vals[k]);
+        values[k] = val;
+      }
+    }
     return values;
   }
   return vals;
@@ -100,6 +105,7 @@ export function springable(input$) {
   const output$ = stream(input$());
   let springs;
   let vals;
+
   on(v => {
     const updateInfo = updateInput(vals, springs, v);
     vals = updateInfo[0];
@@ -108,18 +114,18 @@ export function springable(input$) {
 
   engine.on('tick', (delta) => {
     if (delta > 1000) return;
-    if (!springs && !vals) return;
-    let next = clone(output$());
+    if (springs === false && vals === false) return;
+    let next = base(output$());
+
     if (springs) {
-      const updated = stepSprings(springs, next, delta);
+      const [val, updated] = stepSprings(springs, next, output$(), delta);
       if (updated === false) {
         springs = false;
-      } else {
-        next = updated;
       }
+      next = val;
     }
-    if (!springs && !vals) return;
-    if (vals) {
+    if (springs === false && vals === false) return;
+    if (vals !== false) {
       next = stepVals(vals, next);
       vals = false;
     }
@@ -130,8 +136,8 @@ export function springable(input$) {
 }
 
 export function spring(val$, config = presets.noWobble) {
-  if (isStream(val$ || 0)) {
-    const input$ = stream(val$());
+  if (isStream(val$)) {
+    const input$ = stream(val$() || 0);
     let skip = true;
     on(v => {
       if (skip) {

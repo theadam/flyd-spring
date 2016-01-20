@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "clean": "rimraf lib dist",
-    "build:lib": "babel src --out-dir lib",
+    "build:lib": "babel src --loose --out-dir lib",
     "build:umd": "webpack src/index.js dist/flyd-spring.js --display-modules --progress && NODE_ENV=production webpack src/index.js dist/flyd-spring.min.js --display-modules --progress",
     "build": "npm run build:lib && npm run build:umd",
     "lint": "eslint src",
@@ -42,6 +42,6 @@
   },
   "dependencies": {
     "raf-loop": "^1.1.3",
-    "ramda": "^0.17.1"
+    "react-motion": "^0.3.1"
   }
 }

@@ -1,8 +1,9 @@
 import './index.css';
+import fps from 'fps';
 import raf from 'raf';
 import { reverse, init, repeat } from 'ramda';
 import { stream, on } from 'flyd';
-import { spring, springable } from 'flyd-spring';
+import { spring, springable, presets } from 'flyd-spring';
 
 const pos$ = stream({x: 0, y: 0});
 
@@ -12,8 +13,8 @@ document.addEventListener('mousemove', ({pageX, pageY}) => {
 
 const balls = reverse([...document.getElementsByClassName('ball')]);
 
-const springFrom = (v, i) => spring(v, [30 * (i + 1), 5 * (i + 1)]);
-const toSpring = ({x, y}, i) => ({x: springFrom(x, i), y: springFrom(y, i)});
+const springFrom = v => spring(v, presets.gentle);
+const toSpring = ({x, y}) => ({x: springFrom(x), y: springFrom(y)});
 
 function stagger(src$, num) {
   const input$ = stream(repeat(src$(), num));
@@ -33,5 +34,14 @@ function moveBall(ball, x, y) {
   ball.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 }
 
-on((poss) => poss.forEach(({x, y}, i) => moveBall(balls[i], x, y)), stagger(pos$, balls.length));
+const spring$ = stagger(pos$, balls.length);
+
+on((poss) => poss.forEach(({x, y}, i) => moveBall(balls[i], x, y)), spring$);
+
+
+const fpsBox = document.getElementById('fps');
+const ticker = fps({ every: 30 });
+on(() => ticker.tick(), spring$);
+
+ticker.on('data', (data) => fpsBox.innerHTML = data + ' fps');
 

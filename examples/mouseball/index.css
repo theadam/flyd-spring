@@ -11,3 +11,10 @@
   width: 100%;
 }
 
+#fps {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border: 1px solid black;
+  font-size: 30px;
+}
