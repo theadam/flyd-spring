@@ -7,7 +7,7 @@
 		exports["flydSpring"] = factory(require("flyd"));
 	else
 		root["flydSpring"] = factory(root["flyd"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_10__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_15__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -62,61 +62,240 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
 
+	exports.springable = springable;
 	exports.spring = spring;
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	var _flyd = __webpack_require__(10);
+	var _rafLoop = __webpack_require__(8);
 
-	var _stepper3 = __webpack_require__(2);
+	var _rafLoop2 = _interopRequireDefault(_rafLoop);
+
+	var _ramdaSrcClone = __webpack_require__(10);
+
+	var _ramdaSrcClone2 = _interopRequireDefault(_ramdaSrcClone);
+
+	var _flyd = __webpack_require__(15);
+
+	var _stepper3 = __webpack_require__(3);
 
 	var _stepper4 = _interopRequireDefault(_stepper3);
 
-	var _presets = __webpack_require__(1);
+	var _presets = __webpack_require__(2);
 
 	var _presets2 = _interopRequireDefault(_presets);
 
-	var loop = __webpack_require__(7);
 	exports.presets = _presets2['default'];
 
-	var engine = loop();
+	var engine = (0, _rafLoop2['default'])();
 
-	function spring(val$) {
-	  var _ref = arguments.length <= 1 || arguments[1] === undefined ? _presets2['default'].noWobble : arguments[1];
+	var isSpring = function isSpring(value) {
+	  return value.__spring === true;
+	};
+	function wrapSpring(dest, config) {
+	  return {
+	    __spring: true,
+	    dest: dest,
+	    config: config,
+	    vel: 0
+	  };
+	}
 
-	  var _ref2 = _slicedToArray(_ref, 2);
+	function updateInput(vals, springs, input) {
+	  if (Array.isArray(input)) {
+	    var _ret = (function () {
+	      var newSprings = springs || [];
+	      var newVals = vals || [];
+	      input.forEach(function (v, k) {
+	        var _updateInput = updateInput(newVals[k], newSprings[k], v);
 
-	  var k = _ref2[0];
-	  var b = _ref2[1];
+	        var _updateInput2 = _slicedToArray(_updateInput, 2);
 
-	  var vel = 0;
-	  var x = val$() || 0;
-	  var k$ = (0, _flyd.isStream)(k) ? k : (0, _flyd.stream)(k);
-	  var b$ = (0, _flyd.isStream)(b) ? b : (0, _flyd.stream)(b);
+	        var nv = _updateInput2[0];
+	        var ns = _updateInput2[1];
 
-	  var output$ = (0, _flyd.stream)(x);
+	        if (ns === false) {
+	          delete newSprings[k];
+	          newVals[k] = nv;
+	        } else {
+	          delete newVals[k];
+	          newSprings[k] = ns;
+	        }
+	      });
+	      return {
+	        v: [newVals.length === 0 ? false : newVals, newSprings.length === 0 ? false : newSprings]
+	      };
+	    })();
+
+	    if (typeof _ret === 'object') return _ret.v;
+	  }
+	  if (isSpring(input)) {
+	    if (springs && isSpring(springs)) {
+	      springs.dest = input.dest;
+	      springs.config = input.config;
+	      return [false, springs];
+	    }
+	    return [false, input];
+	  }
+	  if (typeof input === 'object') {
+	    var _ret2 = (function () {
+	      var newSprings = springs || {};
+	      var newVals = vals || {};
+	      Object.keys(input).forEach(function (k) {
+	        var _updateInput3 = updateInput(newVals[k], newSprings[k], input[k]);
+
+	        var _updateInput32 = _slicedToArray(_updateInput3, 2);
+
+	        var nv = _updateInput32[0];
+	        var ns = _updateInput32[1];
+
+	        if (ns === false) {
+	          delete newSprings[k];
+	          newVals[k] = nv;
+	        } else {
+	          delete newVals[k];
+	          newSprings[k] = ns;
+	        }
+	      });
+	      return {
+	        v: [Object.keys(newVals).length === 0 ? false : newVals, Object.keys(newSprings).length === 0 ? false : newSprings]
+	      };
+	    })();
+
+	    if (typeof _ret2 === 'object') return _ret2.v;
+	  }
+	  return [input, false];
+	}
+
+	function stepSprings(springs, inputValues, delta) {
+	  var values = (0, _ramdaSrcClone2['default'])(inputValues);
+	  if (!isSpring(springs)) {
+	    Object.keys(springs).forEach(function (k) {
+	      var val = stepSprings(springs[k], values[k], delta);
+	      if (val === false) {
+	        delete springs[k];
+	      } else {
+	        values[k] = val;
+	      }
+	    });
+	    return Object.keys(springs).length === 0 ? false : values;
+	  }
+	  if (values === springs.dest && springs.vel === 0) return false;
+
+	  var _stepper = (0, _stepper4['default'])(delta / 1000, values, springs.vel, springs.dest, springs.config[0], springs.config[1]);
+
+	  var _stepper2 = _slicedToArray(_stepper, 2);
+
+	  var newX = _stepper2[0];
+	  var newV = _stepper2[1];
+
+	  springs.vel = newV;
+	  return newX;
+	}
+
+	function stepVals(vals, inputValues) {
+	  if (typeof vals === 'object') {
+	    var _ret3 = (function () {
+	      var values = (0, _ramdaSrcClone2['default'])(inputValues);
+	      Object.keys(vals).forEach(function (k) {
+	        var val = stepVals(vals[k], values[k]);
+	        delete vals[k];
+	        values[k] = val;
+	      });
+	      return {
+	        v: values
+	      };
+	    })();
+
+	    if (typeof _ret3 === 'object') return _ret3.v;
+	  }
+	  return vals;
+	}
+
+	function springable(input$) {
+	  var output$ = (0, _flyd.stream)(input$());
+	  var springs = undefined;
+	  var vals = undefined;
+	  (0, _flyd.on)(function (v) {
+	    var updateInfo = updateInput(vals, springs, v);
+	    vals = updateInfo[0];
+	    springs = updateInfo[1];
+	  }, input$);
+
 	  engine.on('tick', function (delta) {
 	    if (delta > 1000) return;
-	    var destX = val$() || 0;
-	    if (destX === x) return;
-
-	    var _stepper = (0, _stepper4['default'])(delta / 1000, x, vel, destX, k$(), b$());
-
-	    var _stepper2 = _slicedToArray(_stepper, 2);
-
-	    var newX = _stepper2[0];
-	    var newV = _stepper2[1];
-
-	    vel = newV;
-	    x = newX;
-	    output$(newX);
+	    if (!springs && !vals) return;
+	    var next = (0, _ramdaSrcClone2['default'])(output$());
+	    if (springs) {
+	      var updated = stepSprings(springs, next, delta);
+	      if (updated === false) {
+	        springs = false;
+	      } else {
+	        next = updated;
+	      }
+	    }
+	    if (!springs && !vals) return;
+	    if (vals) {
+	      next = stepVals(vals, next);
+	      vals = false;
+	    }
+	    output$(next);
 	  });
 	  engine.start();
 	  return output$;
 	}
 
+	function spring(val$) {
+	  var config = arguments.length <= 1 || arguments[1] === undefined ? _presets2['default'].noWobble : arguments[1];
+
+	  if ((0, _flyd.isStream)(val$ || 0)) {
+	    var _ret4 = (function () {
+	      var input$ = (0, _flyd.stream)(val$());
+	      var skip = true;
+	      (0, _flyd.on)(function (v) {
+	        if (skip) {
+	          skip = false;
+	          return;
+	        }
+	        input$(wrapSpring(v, config));
+	      }, val$);
+	      return {
+	        v: springable(input$)
+	      };
+	    })();
+
+	    if (typeof _ret4 === 'object') return _ret4.v;
+	  }
+	  return wrapSpring(val$, config);
+	}
+
 /***/ },
 /* 1 */
+/***/ function(module, exports) {
+
+	/**
+	 * Optimized internal two-arity curry function.
+	 *
+	 * @private
+	 * @category Function
+	 * @param {Function} fn The function to curry.
+	 * @return {Function} The curried function.
+	 */
+	module.exports = function _curry1(fn) {
+	  return function f1(a) {
+	    if (arguments.length === 0) {
+	      return f1;
+	    } else if (a != null && a['@@functional/placeholder'] === true) {
+	      return f1;
+	    } else {
+	      return fn.apply(this, arguments);
+	    }
+	  };
+	};
+
+
+/***/ },
+/* 2 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -133,7 +312,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 2 */
+/* 3 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -172,7 +351,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = exports["default"];
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -476,7 +655,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 4 */
+/* 5 */
 /***/ function(module, exports) {
 
 	if (typeof Object.create === 'function') {
@@ -505,7 +684,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 5 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {// Generated by CoffeeScript 1.7.1
@@ -541,10 +720,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	}).call(this);
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(6)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7)))
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports) {
 
 	// shim for using process in browser
@@ -641,13 +820,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var inherits = __webpack_require__(4)
-	var EventEmitter = __webpack_require__(3).EventEmitter
-	var now = __webpack_require__(9)
-	var raf = __webpack_require__(8)
+	var inherits = __webpack_require__(5)
+	var EventEmitter = __webpack_require__(4).EventEmitter
+	var now = __webpack_require__(14)
+	var raf = __webpack_require__(9)
 
 	module.exports = Engine
 	function Engine(fn) {
@@ -690,10 +869,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var now = __webpack_require__(5)
+	var now = __webpack_require__(6)
 	  , global = typeof window === 'undefined' ? {} : window
 	  , vendors = ['moz', 'webkit']
 	  , suffix = 'AnimationFrame'
@@ -764,7 +943,129 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 9 */
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var _clone = __webpack_require__(11);
+	var _curry1 = __webpack_require__(1);
+
+
+	/**
+	 * Creates a deep copy of the value which may contain (nested) `Array`s and
+	 * `Object`s, `Number`s, `String`s, `Boolean`s and `Date`s. `Function`s are
+	 * not copied, but assigned by their reference.
+	 *
+	 * @func
+	 * @memberOf R
+	 * @category Object
+	 * @sig {*} -> {*}
+	 * @param {*} value The object or array to clone
+	 * @return {*} A new object or array.
+	 * @example
+	 *
+	 *      var objects = [{}, {}, {}];
+	 *      var objectsClone = R.clone(objects);
+	 *      objects[0] === objectsClone[0]; //=> false
+	 */
+	module.exports = _curry1(function clone(value) {
+	  return _clone(value, [], []);
+	});
+
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var _cloneRegExp = __webpack_require__(12);
+	var type = __webpack_require__(13);
+
+
+	/**
+	 * Copies an object.
+	 *
+	 * @private
+	 * @param {*} value The value to be copied
+	 * @param {Array} refFrom Array containing the source references
+	 * @param {Array} refTo Array containing the copied source references
+	 * @return {*} The copied value.
+	 */
+	module.exports = function _clone(value, refFrom, refTo) {
+	  var copy = function copy(copiedValue) {
+	    var len = refFrom.length;
+	    var idx = 0;
+	    while (idx < len) {
+	      if (value === refFrom[idx]) {
+	        return refTo[idx];
+	      }
+	      idx += 1;
+	    }
+	    refFrom[idx + 1] = value;
+	    refTo[idx + 1] = copiedValue;
+	    for (var key in value) {
+	      copiedValue[key] = _clone(value[key], refFrom, refTo);
+	    }
+	    return copiedValue;
+	  };
+	  switch (type(value)) {
+	    case 'Object':  return copy({});
+	    case 'Array':   return copy([]);
+	    case 'Date':    return new Date(value);
+	    case 'RegExp':  return _cloneRegExp(value);
+	    default:        return value;
+	  }
+	};
+
+
+/***/ },
+/* 12 */
+/***/ function(module, exports) {
+
+	module.exports = function _cloneRegExp(pattern) {
+	  return new RegExp(pattern.source, (pattern.global     ? 'g' : '') +
+	                                    (pattern.ignoreCase ? 'i' : '') +
+	                                    (pattern.multiline  ? 'm' : '') +
+	                                    (pattern.sticky     ? 'y' : '') +
+	                                    (pattern.unicode    ? 'u' : ''));
+	};
+
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var _curry1 = __webpack_require__(1);
+
+
+	/**
+	 * Gives a single-word string description of the (native) type of a value, returning such
+	 * answers as 'Object', 'Number', 'Array', or 'Null'.  Does not attempt to distinguish user
+	 * Object types any further, reporting them all as 'Object'.
+	 *
+	 * @func
+	 * @memberOf R
+	 * @category Type
+	 * @sig (* -> {*}) -> String
+	 * @param {*} val The value to test
+	 * @return {String}
+	 * @example
+	 *
+	 *      R.type({}); //=> "Object"
+	 *      R.type(1); //=> "Number"
+	 *      R.type(false); //=> "Boolean"
+	 *      R.type('s'); //=> "String"
+	 *      R.type(null); //=> "Null"
+	 *      R.type([]); //=> "Array"
+	 *      R.type(/[A-z]/); //=> "RegExp"
+	 */
+	module.exports = _curry1(function type(val) {
+	  return val === null      ? 'Null'      :
+	         val === undefined ? 'Undefined' :
+	         Object.prototype.toString.call(val).slice(8, -1);
+	});
+
+
+/***/ },
+/* 14 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {module.exports =
@@ -778,10 +1079,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 10 */
+/* 15 */
 /***/ function(module, exports) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_10__;
+	module.exports = __WEBPACK_EXTERNAL_MODULE_15__;
 
 /***/ }
 /******/ ])
