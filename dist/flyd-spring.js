@@ -172,18 +172,27 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	function stepSprings(springs, values, last, delta) {
 	  if (!isSpring(springs)) {
+	    var updateCount = 0;
 	    for (var k in springs) {
 	      if (springs.hasOwnProperty(k)) {
-	        var val = stepSprings(springs[k], values[k] || base(last[k]), last[k], delta);
-	        if (val === false) {
+	        var _stepSprings = stepSprings(springs[k], values[k] || base(last[k]), last[k], delta);
+
+	        var _stepSprings2 = _slicedToArray(_stepSprings, 2);
+
+	        var val = _stepSprings2[0];
+	        var updated = _stepSprings2[1];
+
+	        if (updated === false) {
 	          delete springs[k];
 	        } else {
-	          values[k] = val;
+	          updateCount += 1;
 	        }
+	        values[k] = val;
 	      }
 	    }
-	    return Object.keys(springs).length === 0 ? false : values;
+	    return [values, updateCount > 0];
 	  }
+	  if (last === springs.dest && springs.vel === 0) return [last, false];
 
 	  var _stepper = (0, _reactMotionLibStepper2['default'])(delta / 1000, last, springs.vel, springs.dest, springs.config[0], springs.config[1]);
 
@@ -193,7 +202,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var newV = _stepper2[1];
 
 	  springs.vel = newV;
-	  return newX;
+	  return [newX, true];
 	}
 
 	function stepVals(vals, values) {
@@ -227,12 +236,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var next = base(output$());
 
 	    if (springs) {
-	      var updated = stepSprings(springs, next, output$(), delta);
+	      var _stepSprings3 = stepSprings(springs, next, output$(), delta);
+
+	      var _stepSprings32 = _slicedToArray(_stepSprings3, 2);
+
+	      var val = _stepSprings32[0];
+	      var updated = _stepSprings32[1];
+
 	      if (updated === false) {
 	        springs = false;
-	      } else {
-	        next = updated;
 	      }
+	      next = val;
 	    }
 	    if (springs === false && vals === false) return;
 	    if (vals !== false) {
