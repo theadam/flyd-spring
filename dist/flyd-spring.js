@@ -97,70 +97,98 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	}
 
-	function updateInput(vals, springs, input) {
-	  if (Array.isArray(input)) {
-	    var _ret = (function () {
-	      var newSprings = springs || [];
-	      var newVals = vals || [];
-	      input.forEach(function (v, k) {
-	        var _updateInput = updateInput(newVals[k], newSprings[k], v);
+	function updateInput(_x2, _x3, _x4, _x5) {
+	  var _again = true;
 
-	        var _updateInput2 = _slicedToArray(_updateInput, 2);
+	  _function: while (_again) {
+	    var vals = _x2,
+	        springs = _x3,
+	        input = _x4,
+	        config = _x5;
+	    _again = false;
 
-	        var nv = _updateInput2[0];
-	        var ns = _updateInput2[1];
+	    if (Array.isArray(input)) {
+	      var _ret = (function () {
+	        var newSprings = springs || [];
+	        var newVals = vals || [];
+	        input.forEach(function (v, k) {
+	          var _updateInput = updateInput(newVals[k], newSprings[k], v, config);
 
-	        if (ns === false) {
-	          delete newSprings[k];
-	          newVals[k] = nv;
-	        } else {
-	          delete newVals[k];
-	          newSprings[k] = ns;
-	        }
-	      });
-	      return {
-	        v: [newVals.length === 0 ? false : newVals, newSprings.length === 0 ? false : newSprings]
-	      };
-	    })();
+	          var _updateInput2 = _slicedToArray(_updateInput, 2);
 
-	    if (typeof _ret === 'object') return _ret.v;
-	  }
-	  if (isSpring(input)) {
-	    if (springs && isSpring(springs)) {
-	      springs.dest = input.dest;
-	      springs.config = input.config;
-	      return [false, springs];
+	          var nv = _updateInput2[0];
+	          var ns = _updateInput2[1];
+
+	          if (ns === false) {
+	            delete newSprings[k];
+	            newVals[k] = nv;
+	          } else {
+	            delete newVals[k];
+	            newSprings[k] = ns;
+	          }
+	        });
+	        return {
+	          v: [newVals.length === 0 ? false : newVals, newSprings.length === 0 ? false : newSprings]
+	        };
+	      })();
+
+	      if (typeof _ret === 'object') return _ret.v;
 	    }
-	    return [false, input];
+	    if (isSpring(input)) {
+	      if (typeof input.dest === 'object') {
+	        _x2 = vals;
+	        _x3 = springs;
+	        _x4 = input.dest;
+	        _x5 = input.config;
+	        _again = true;
+	        _ret = undefined;
+	        continue _function;
+	      }
+	      if (springs && isSpring(springs)) {
+	        springs.dest = input.dest;
+	        springs.config = input.config;
+	        return [false, springs];
+	      }
+	      return [false, input];
+	    }
+	    if (typeof input === 'object') {
+	      var _ret2 = (function () {
+	        var newSprings = springs || {};
+	        var newVals = vals || {};
+	        Object.keys(input).forEach(function (k) {
+	          var _updateInput3 = updateInput(newVals[k], newSprings[k], input[k], config);
+
+	          var _updateInput32 = _slicedToArray(_updateInput3, 2);
+
+	          var nv = _updateInput32[0];
+	          var ns = _updateInput32[1];
+
+	          if (ns === false) {
+	            delete newSprings[k];
+	            newVals[k] = nv;
+	          } else {
+	            delete newVals[k];
+	            newSprings[k] = ns;
+	          }
+	        });
+	        return {
+	          v: [Object.keys(newVals).length === 0 ? false : newVals, Object.keys(newSprings).length === 0 ? false : newSprings]
+	        };
+	      })();
+
+	      if (typeof _ret2 === 'object') return _ret2.v;
+	    }
+	    if (config) {
+	      _x2 = vals;
+	      _x3 = springs;
+	      _x4 = wrapSpring(input, config);
+	      _x5 = config;
+	      _again = true;
+	      _ret = _ret2 = undefined;
+	      continue _function;
+	    }
+	    return [input, false];
 	  }
-	  if (typeof input === 'object') {
-	    var _ret2 = (function () {
-	      var newSprings = springs || {};
-	      var newVals = vals || {};
-	      Object.keys(input).forEach(function (k) {
-	        var _updateInput3 = updateInput(newVals[k], newSprings[k], input[k]);
-
-	        var _updateInput32 = _slicedToArray(_updateInput3, 2);
-
-	        var nv = _updateInput32[0];
-	        var ns = _updateInput32[1];
-
-	        if (ns === false) {
-	          delete newSprings[k];
-	          newVals[k] = nv;
-	        } else {
-	          delete newVals[k];
-	          newSprings[k] = ns;
-	        }
-	      });
-	      return {
-	        v: [Object.keys(newVals).length === 0 ? false : newVals, Object.keys(newSprings).length === 0 ? false : newSprings]
-	      };
-	    })();
-
-	    if (typeof _ret2 === 'object') return _ret2.v;
-	  }
-	  return [input, false];
 	}
 
 	var baseObj = function baseObj(from) {
@@ -219,13 +247,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return vals;
 	}
 
-	function springable(input$) {
+	function springable(input$, config) {
 	  var output$ = (0, _flyd.stream)(input$());
+	  output$.moving = (0, _flyd.stream)(false);
 	  var springs = undefined;
 	  var vals = undefined;
 
 	  (0, _flyd.on)(function (v) {
-	    var updateInfo = updateInput(vals, springs, v);
+	    var updateInfo = updateInput(vals, springs, v, config);
 	    vals = updateInfo[0];
 	    springs = updateInfo[1];
 	  }, input$);
@@ -245,6 +274,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      if (updated === false) {
 	        springs = false;
+	        if (output$.moving() === true) output$.moving(false);
+	      } else {
+	        if (output$.moving() === false) output$.moving(true);
 	      }
 	      next = val;
 	    }
@@ -271,10 +303,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	          skip = false;
 	          return;
 	        }
-	        input$(wrapSpring(v, config));
+	        input$(v);
 	      }, val$);
 	      return {
-	        v: springable(input$)
+	        v: springable(input$, config)
 	      };
 	    })();
 
