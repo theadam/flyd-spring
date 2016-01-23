@@ -1,0 +1,36 @@
+.container {
+  width: 100%;
+}
+
+.box {
+  width: 200px;
+  margin: 0 auto;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.box button {
+  width: 100%;
+}
+
+.item {
+  border: 1px solid black;
+  overflow: hidden;
+}
+
+.text {
+  height: 100%;
+  line-height: 100%;
+}
+
+.close {
+  height: 100%;
+  line-height: 100%;
+  opacity: .7;
+  float: right;
+}
+
+.close:hover {
+  opacity: 1;
+  cursor: pointer;
+}

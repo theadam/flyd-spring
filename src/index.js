@@ -18,12 +18,12 @@ function wrapSpring(dest, config) {
 }
 
 
-function updateInput(vals, springs, input) {
+function updateInput(vals, springs, input, config) {
   if (Array.isArray(input)) {
     const newSprings = springs || [];
     const newVals = vals || [];
     input.forEach((v, k) => {
-      const [nv, ns] = updateInput(newVals[k], newSprings[k], v);
+      const [nv, ns] = updateInput(newVals[k], newSprings[k], v, config);
       if (ns === false) {
         delete(newSprings[k]);
         newVals[k] = nv;
@@ -35,6 +35,7 @@ function updateInput(vals, springs, input) {
     return [newVals.length === 0 ? false : newVals, newSprings.length === 0 ? false : newSprings];
   }
   if (isSpring(input)) {
+    if (typeof input.dest === 'object') return updateInput(vals, springs, input.dest, input.config);
     if (springs && isSpring(springs)) {
       springs.dest = input.dest;
       springs.config = input.config;
@@ -46,7 +47,7 @@ function updateInput(vals, springs, input) {
     const newSprings = springs || {};
     const newVals = vals || {};
     Object.keys(input).forEach(k => {
-      const [nv, ns] = updateInput(newVals[k], newSprings[k], input[k]);
+      const [nv, ns] = updateInput(newVals[k], newSprings[k], input[k], config);
       if (ns === false) {
         delete(newSprings[k]);
         newVals[k] = nv;
@@ -56,6 +57,9 @@ function updateInput(vals, springs, input) {
       }
     });
     return [Object.keys(newVals).length === 0 ? false : newVals, Object.keys(newSprings).length === 0 ? false : newSprings];
+  }
+  if (config) {
+    return updateInput(vals, springs, wrapSpring(input, config), config);
   }
   return [input, false];
 }
@@ -101,13 +105,14 @@ function stepVals(vals, values) {
   return vals;
 }
 
-export function springable(input$) {
+export function springable(input$, config) {
   const output$ = stream(input$());
+  output$.moving = stream(false);
   let springs;
   let vals;
 
   on(v => {
-    const updateInfo = updateInput(vals, springs, v);
+    const updateInfo = updateInput(vals, springs, v, config);
     vals = updateInfo[0];
     springs = updateInfo[1];
   }, input$);
@@ -121,6 +126,9 @@ export function springable(input$) {
       const [val, updated] = stepSprings(springs, next, output$(), delta);
       if (updated === false) {
         springs = false;
+        if (output$.moving() === true) output$.moving(false);
+      } else {
+        if (output$.moving() === false) output$.moving(true);
       }
       next = val;
     }
@@ -144,9 +152,9 @@ export function spring(val$, config = presets.noWobble) {
         skip = false;
         return;
       }
-      input$(wrapSpring(v, config));
+      input$(v);
     }, val$);
-    return springable(input$);
+    return springable(input$, config);
   }
   return wrapSpring(val$, config);
 }

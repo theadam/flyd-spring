@@ -38,10 +38,9 @@ const spring$ = stagger(pos$, balls.length);
 
 on((poss) => poss.forEach(({x, y}, i) => moveBall(balls[i], x, y)), spring$);
 
-
 const fpsBox = document.getElementById('fps');
 const ticker = fps({ every: 30 });
 on(() => ticker.tick(), spring$);
 
-ticker.on('data', (data) => fpsBox.innerHTML = data + ' fps');
+ticker.on('data', (data) => fpsBox.innerHTML = (spring$.moving() ? 'Moving' : 'Still') + ' ' + data + ' fps');
 
